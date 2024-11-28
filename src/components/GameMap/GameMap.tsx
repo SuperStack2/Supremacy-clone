@@ -49,12 +49,12 @@ const GameMap: React.FC<GameMapProps> = ({ territories, units, onUnitMove, onMap
 
       // Render new unit sprites
       units.forEach(unit => {
-        const texture = PIXI.Texture.from(unit.type === 'Infantry' ? '/infantry.png' : '/other_unit.png'); // Replace with actual unit textures
+        const texture = PIXI.Texture.from(unit.type === 'Infantry' ? '/infantry.png' : '/other_unit.png'); 
         const sprite = new PIXI.Sprite(texture);
         sprite.x = unit.x;
         sprite.y = unit.y;
-        sprite.width = tileSize;
-        sprite.height = tileSize;
+        sprite.width = 20; // Adjust size as needed
+        sprite.height = 20; // Adjust size as needed
         app.stage.addChild(sprite);
         unitSprites[unit.id] = sprite; 
       });
