@@ -1,13 +1,18 @@
 // src/components/GameMap/GameMap.tsx
 
 import React, { useRef, useEffect } from 'react';
-import * as PIXI from 'pixi.js';
+import * as PIXI from 'pixi.js'; 
+import { Unit, Territory } from '../../types/types';
 
-const GameMap: React.FC = () => {
+interface GameMapProps {
+  territories: Territory[];
+  units: Unit[];
+  onUnitMove: (unitId: number, territoryId: number) => void;
+  onMapClick: (x: number, y: number) => void;
+}
+
+const GameMap: React.FC<GameMapProps> = ({ territories, units, onUnitMove, onMapClick }) => {
   const tileSize = 32; // Size of each grid tile
-  let selectedUnit: PIXI.Sprite | null = null;
-
-
   const pixiContainer = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,45 +20,77 @@ const GameMap: React.FC = () => {
     const app = new PIXI.Application({
       width: window.innerWidth,
       height: window.innerHeight,
-      backgroundColor: 0x1099bb,
     });
 
     // PixiJS-Anwendung zum DOM hinzufügen
     if (pixiContainer.current) {
       pixiContainer.current.appendChild(app.view);
     }
-
-    // Karte als Sprite hinzufügen
-    const mapTexture = PIXI.Texture.from('/map-placeholder.jpg'); // Assuming you have a map image at this path
-    const mapSprite = new PIXI.Sprite(mapTexture);
-
-    // Größe anpassen
+    
+    // Create the map sprite
+    const mapSprite = PIXI.Sprite.from('/map.png'); 
     mapSprite.width = app.screen.width;
     mapSprite.height = app.screen.height;
-
-    // Füge das Karten-Sprite zur Bühne hinzu
+    
     app.stage.addChild(mapSprite);
 
-    // Einheit (Infanterie) hinzufügen
-    const infantryTexture = PIXI.Texture.from('/infantry.png');
-    const infantryUnit = new PIXI.Sprite(infantryTexture);
-    infantryUnit.x = tileSize;
-    infantryUnit.y = tileSize;
-    infantryUnit.width = tileSize;
-    infantryUnit.height = tileSize;
-    infantryUnit.interactive = true;
-    infantryUnit.buttonMode = true; 
-    
-    infantryUnit.on('pointerdown', () => {
-      selectedUnit = infantryUnit;
-    });
+    // Make the background interactive for dragging and clicking
+    mapSprite.interactive = true;
 
-    app.stage.addChild(infantryUnit);
+    const unitSprites: { [id: number]: PIXI.Sprite } = {};
+    const territorySprites: { [id: number]: PIXI.Graphics } = {};
+
+    const renderUnits = () => {
+      // Remove existing unit sprites
+      for (const id in unitSprites) {
+        app.stage.removeChild(unitSprites[id]);
+        delete unitSprites[id];
+      }
+
+      // Render new unit sprites
+      units.forEach(unit => {
+        const texture = PIXI.Texture.from(unit.type === 'Infantry' ? '/infantry.png' : '/other_unit.png'); // Replace with actual unit textures
+        const sprite = new PIXI.Sprite(texture);
+        sprite.x = unit.x;
+        sprite.y = unit.y;
+        sprite.width = tileSize;
+        sprite.height = tileSize;
+        app.stage.addChild(sprite);
+        unitSprites[unit.id] = sprite; 
+      });
+    };
+
+    const renderTerritories = () => {
+      territories.forEach(territory => {
+        const graphics = new PIXI.Graphics();
+        graphics.beginFill(territory.ownerId === 1 ? 0x00FF00 : 0xFF0000, 0.5); // Green for player 1, red for player 2
+        graphics.drawRect(territory.x, territory.y, territory.width, territory.height);
+        graphics.endFill();
+        graphics.interactive = true;
+        graphics.on('pointerdown', () => handleTerritoryClick(territory));
+        app.stage.addChild(graphics);
+        territorySprites[territory.id] = graphics;
+      });
+    };
+
+    const handleTerritoryClick = (territory: Territory) => {
+      const selectedUnitId = units.find(unit => unit.selected)?.id;
+      if (selectedUnitId) {
+        onUnitMove(selectedUnitId, territory.id); 
+      } else {
+          initiateCombat(territory);
+      }
+    };
+
+
 
     // Interaktion aktivieren
-    mapSprite.interactive = true;
-    //mapSprite.buttonMode = true; // Use this for older PixiJS versions
-    mapSprite.cursor = 'grab'; // Use this for newer PixiJS versions for the hand cursor
+    mapSprite.on('pointerdown', (event: PIXI.interaction.InteractionEvent) => {
+      const position = event.data.getLocalPosition(app.stage);
+      onMapClick(position.x, position.y);
+    });
+    
+    mapSprite.cursor = 'grab'; 
 
     // Dragging-Variablen initialisieren
     let dragging = false;
@@ -63,29 +100,13 @@ const GameMap: React.FC = () => {
     // Event Handler
     const onDragStart = (event: PIXI.interaction.InteractionEvent) => {
       dragging = true;
-      dragData = event.data;
+      dragData = event.data; 
       const position = dragData.getLocalPosition(mapSprite.parent);
       dragOffset.x = mapSprite.x - position.x;
       dragOffset.y = mapSprite.y - position.y;
     };
 
-    const onMapClick = (event: PIXI.interaction.InteractionEvent) => {
-      if (selectedUnit) {
-        const targetX = Math.floor(event.data.global.x / tileSize) * tileSize;
-        const targetY = Math.floor(event.data.global.y / tileSize) * tileSize;
-  
-        // Hier würdest du normalerweise eine Pfadfindungslogik verwenden, 
-        // um den besten Pfad zum Ziel zu finden.
-        // Für diese einfache Implementierung bewegen wir die Einheit direkt zum Ziel.
-        selectedUnit.x = targetX;
-        selectedUnit.y = targetY;
-  
-        selectedUnit = null; // Einheit nach dem Bewegen abwählen
-      }
-    }
-
-    mapSprite.on('pointerdown', onMapClick);
-
+    
     const onDragEnd = () => {
       dragging = false;
       dragData = null;
@@ -116,11 +137,42 @@ const GameMap: React.FC = () => {
 
     app.view.addEventListener('wheel', handleWheel);
 
+    renderUnits();
+    renderTerritories();
+
+    const initiateCombat = (territory: Territory) => {
+      const attackingUnit = units.find(unit => unit.selected);
+      const defendingUnit = units.find(unit => unit.territoryId === territory.id && unit.ownerId !== attackingUnit?.ownerId);
+    
+      if (attackingUnit && defendingUnit) {
+        const attackerStrength = attackingUnit.count;
+        const defenderStrength = defendingUnit.count;
+    
+        if (attackerStrength > defenderStrength) {
+          // Attacker wins
+          territory.ownerId = attackingUnit.ownerId;
+          defendingUnit.count = 0; // Or reduce by a percentage
+          attackingUnit.count = Math.round(attackingUnit.count * 0.9); // Reduce attacker's units by 10%
+          onUnitMove(attackingUnit.id, territory.id); // Move attacker to the conquered territory
+        } else {
+          // Defender wins
+          attackingUnit.count = Math.round(attackingUnit.count * 0.9);  // Reduce attacker's units by 10%
+          defendingUnit.count = Math.round(defendingUnit.count * 0.9); // Reduce defender's units by 10%
+        }
+    
+        renderUnits();
+        renderTerritories(); 
+      }
+    };
+
+
     // Cleanup bei Komponentendemontage
     return () => {
       app.destroy(true, true);
     };
-  }, []);
+  }, [territories, units, onUnitMove, onMapClick]); 
+
+
 
   return <div ref={pixiContainer} style={{ width: '100%', height: '100%' }}></div>;
 };
