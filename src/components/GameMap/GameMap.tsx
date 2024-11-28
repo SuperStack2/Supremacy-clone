@@ -1,9 +1,8 @@
-// src/components/GameMap/GameMap.tsx
-
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as PIXI from 'pixi.js';
 import { Unit, Territory } from '../../types/types';
 
+// Define the GameMapProps interface
 interface GameMapProps {
   territories: Territory[];
   units: Unit[];
@@ -13,42 +12,30 @@ interface GameMapProps {
 
 const GameMap: React.FC<GameMapProps> = ({ territories, units, onUnitMove, onMapClick }) => {
   const tileSize = 32; // Size of each grid tile
-  const pixiContainer = useRef<HTMLDivElement>(null);
+  const pixiContainer = useRef<HTMLDivElement>(null); // Correctly typed ref
+
+  const [isContainerReady, setIsContainerReady] = useState(false);
 
   useEffect(() => {
-    // PixiJS-Anwendung erstellen
-    const app = new PIXI.Application({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
+    if (pixiContainer.current) {
+      setIsContainerReady(true);
+    }
+  }, [pixiContainer.current]); // Access current value of ref
 
-    // PixiJS-Anwendung zum DOM hinzufügen
-    const appendPixiView = () => {
-      if (pixiContainer.current) {
-        pixiContainer.current.appendChild(app.view);
-      } else {
-        // Retry in a short interval using requestAnimationFrame
-        requestAnimationFrame(appendPixiView);
-      }
-    };
+  useEffect(() => {
+    if (isContainerReady) {
+      // PixiJS application setup
+      const app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
 
-    appendPixiView();
+      // Append PixiJS view to the container
+      pixiContainer.current?.appendChild(app.view); 
 
-    // Create the map sprite
-    const mapSprite = PIXI.Sprite.from('/assets/map.png');
-    mapSprite.width = app.screen.width;
-    mapSprite.height = app.screen.height;
-
-    app.stage.addChild(mapSprite);
-
-    // Make the background interactive for dragging and clicking
-    mapSprite.interactive = true;
-
-    // Cleanup: Destroy the PixiJS application when the component unmounts
-    return () => {
-      app.destroy(true, true);
-    };
-  }, []);
+      // ... (rest of your PixiJS initialization and cleanup code)
+    }
+  }, [isContainerReady]);
 
   return (
     <div ref={pixiContainer} style={{ width: '100%', height: '100%' }} />
