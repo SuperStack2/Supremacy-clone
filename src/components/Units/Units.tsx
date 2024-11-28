@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import infantry from '../assets/infantry.png'; // Placeholder image
+import infantry from '../../assets/infantry.png'; // Placeholder image
 
 interface Unit {
   id: number;
