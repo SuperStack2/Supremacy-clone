@@ -4,6 +4,10 @@ import React, { useRef, useEffect } from 'react';
 import * as PIXI from 'pixi.js';
 
 const GameMap: React.FC = () => {
+  const tileSize = 32; // Size of each grid tile
+  let selectedUnit: PIXI.Sprite | null = null;
+
+
   const pixiContainer = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +34,22 @@ const GameMap: React.FC = () => {
     // Füge das Karten-Sprite zur Bühne hinzu
     app.stage.addChild(mapSprite);
 
+    // Einheit (Infanterie) hinzufügen
+    const infantryTexture = PIXI.Texture.from('/infantry.png');
+    const infantryUnit = new PIXI.Sprite(infantryTexture);
+    infantryUnit.x = tileSize;
+    infantryUnit.y = tileSize;
+    infantryUnit.width = tileSize;
+    infantryUnit.height = tileSize;
+    infantryUnit.interactive = true;
+    infantryUnit.buttonMode = true; 
+    
+    infantryUnit.on('pointerdown', () => {
+      selectedUnit = infantryUnit;
+    });
+
+    app.stage.addChild(infantryUnit);
+
     // Interaktion aktivieren
     mapSprite.interactive = true;
     //mapSprite.buttonMode = true; // Use this for older PixiJS versions
@@ -48,6 +68,23 @@ const GameMap: React.FC = () => {
       dragOffset.x = mapSprite.x - position.x;
       dragOffset.y = mapSprite.y - position.y;
     };
+
+    const onMapClick = (event: PIXI.interaction.InteractionEvent) => {
+      if (selectedUnit) {
+        const targetX = Math.floor(event.data.global.x / tileSize) * tileSize;
+        const targetY = Math.floor(event.data.global.y / tileSize) * tileSize;
+  
+        // Hier würdest du normalerweise eine Pfadfindungslogik verwenden, 
+        // um den besten Pfad zum Ziel zu finden.
+        // Für diese einfache Implementierung bewegen wir die Einheit direkt zum Ziel.
+        selectedUnit.x = targetX;
+        selectedUnit.y = targetY;
+  
+        selectedUnit = null; // Einheit nach dem Bewegen abwählen
+      }
+    }
+
+    mapSprite.on('pointerdown', onMapClick);
 
     const onDragEnd = () => {
       dragging = false;
@@ -81,7 +118,6 @@ const GameMap: React.FC = () => {
 
     // Cleanup bei Komponentendemontage
     return () => {
-      app.view.removeEventListener('wheel', handleWheel);
       app.destroy(true, true);
     };
   }, []);
