@@ -23,12 +23,18 @@ const GameMap: React.FC<GameMapProps> = ({ territories, units, onUnitMove, onMap
     });
 
     // PixiJS-Anwendung zum DOM hinzufügen
-    if (pixiContainer.current) {
-      pixiContainer.current.appendChild(app.view);
-    }
-    
+    const appendPixiView = () => {
+      if (pixiContainer.current) {
+        pixiContainer.current.appendChild(app.view);
+      } else {
+        setTimeout(appendPixiView, 10); // Retry in 10ms
+      }
+    };
+
+    appendPixiView();
+
     // Create the map sprite
-    const mapSprite = PIXI.Sprite.from('../assets/map.png'); 
+    const mapSprite = PIXI.Sprite.from('/assets/map.png');
     mapSprite.width = app.screen.width;
     mapSprite.height = app.screen.height;
     
@@ -49,7 +55,7 @@ const GameMap: React.FC<GameMapProps> = ({ territories, units, onUnitMove, onMap
 
       // Render new unit sprites
       units.forEach(unit => {
-        const texture = PIXI.Texture.from(unit.type === 'Infantry' ? '../assets/infantry.png' : '../assets/other_unit.png'); 
+        const texture = PIXI.Texture.from(unit.type === 'Infantry' ? '/assets/infantry.png' : '/assets/other_unit.png');
         const sprite = new PIXI.Sprite(texture);
         sprite.x = unit.x;
         sprite.y = unit.y;
