@@ -12,7 +12,6 @@ const GameMap: React.FC = () => {
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: 0x1099bb,
-      resizeTo: window, // Automatische Größenanpassung
     });
 
     // PixiJS-Anwendung zum DOM hinzufügen
@@ -21,7 +20,7 @@ const GameMap: React.FC = () => {
     }
 
     // Karte als Sprite hinzufügen
-    const mapTexture = PIXI.Texture.from('/map-placeholder.jpg');
+    const mapTexture = PIXI.Texture.from('/map-placeholder.jpg'); // Assuming you have a map image at this path
     const mapSprite = new PIXI.Sprite(mapTexture);
 
     // Größe anpassen
@@ -33,15 +32,16 @@ const GameMap: React.FC = () => {
 
     // Interaktion aktivieren
     mapSprite.interactive = true;
-    mapSprite.buttonMode = true;
+    //mapSprite.buttonMode = true; // Use this for older PixiJS versions
+    mapSprite.cursor = 'grab'; // Use this for newer PixiJS versions for the hand cursor
 
     // Dragging-Variablen initialisieren
     let dragging = false;
-    let dragData: PIXI.InteractionData | null = null;
+    let dragData: PIXI.interaction.InteractionData | null = null;
     let dragOffset = { x: 0, y: 0 };
 
     // Event Handler
-    const onDragStart = (event: PIXI.InteractionEvent) => {
+    const onDragStart = (event: PIXI.interaction.InteractionEvent) => {
       dragging = true;
       dragData = event.data;
       const position = dragData.getLocalPosition(mapSprite.parent);
